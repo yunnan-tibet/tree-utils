@@ -11,10 +11,10 @@ import { deepClone } from "./obj";
  * @returns {tree[]}
  */
 export const changeTreePropName = (list: any[], changeKeys: Array<[string, string, Function?]>, childrenKey?: string) => {
-  const _childrenKey = childrenKey || 'children';
   if (!list || !list.length) {
     return [];
   }
+  const _childrenKey = childrenKey || 'children';
   const cloneList = deepClone(list);
   return cloneList.map((item: any) => {
     changeKeys.forEach((keys) => {
@@ -42,6 +42,9 @@ export const changeTreePropName = (list: any[], changeKeys: Array<[string, strin
  * @returns {tree[]} 树形数组
  */
 export function setTreeData(source: any[], id: string, parentId: string, children: string, topCode?: string) {
+  if (!source || !source.length) {
+    return [];
+  }
   const cloneData = deepClone(source) || [];
   const tree = cloneData.filter((father: any) => {
     const branchArr = cloneData.filter((child: any) => father[id] === child[parentId]);
@@ -64,6 +67,9 @@ export function setTreeData(source: any[], id: string, parentId: string, childre
  * @returns {treeObj}
  */
 export const findSingle = (tree: any, key: string, value: any, childrenKey?: string) => {
+  if (!tree) {
+    return null;
+  }
   let myItem;
   const _childrenKey = childrenKey || 'children';
   const loop = (_tree: any) => {
@@ -97,10 +103,10 @@ export const findSingle = (tree: any, key: string, value: any, childrenKey?: str
  * @returns {treeObj}
  */
 export const getMyTreeListById = (key: string, treeList: any[], value: string, childrenKey?: string) => {
-  const _childrenKey = childrenKey || 'children';
   if (!treeList || !treeList.length) {
     return null;
   }
+  const _childrenKey = childrenKey || 'children';
   let myTreeObj = null;
 
   const getTreeList = (_list: any[]) => {
@@ -128,10 +134,10 @@ export const getMyTreeListById = (key: string, treeList: any[], value: string, c
  * @returns {string[]} key值数组
  */
 export const getTreeIdsById = (key: string, treeList: any[], value: string, childrenKey?: string) => {
-  const _childrenKey = childrenKey || 'children';
   if (!treeList || !treeList.length) {
     return [];
   }
+  const _childrenKey = childrenKey || 'children';
   let myTreeObj = getMyTreeListById(key, treeList, value, _childrenKey);
   if (!myTreeObj) {
     return [];
@@ -157,6 +163,9 @@ export const getTreeIdsById = (key: string, treeList: any[], value: string, chil
  * @returns {any[]} 
  */
 export function getPeerList(list: any[], childrenKey?: string) {
+  if (!list || !list.length) {
+    return [];
+  }
   const _childrenKey = childrenKey || 'children';
   const peerList: any = [];
   const loopFunc = (_list: any) => {
@@ -188,24 +197,29 @@ export const filterTreeData = (
   key: string,
   childrenKey?: string,
 ): any[] => {
+  if (!origin || !origin.length) {
+    return [];
+  }
   const resData = [];
   const _childrenKey = childrenKey || 'children';
   // 其实是对子集的筛选
   for (const item of origin) {
-    const _children = item[_childrenKey];
-    // 获取所有符合的子集
-    const childData = filterTreeData(_children, value, key, _childrenKey);
-    if (_children && childData.length) {
-      // 有符合的子集，就加入当前的item，形成链
-      resData.push({
-        ...item,
-        [_childrenKey]: childData,
-      });
-      continue;
-    }
     if (typeof item[key] === 'string' && item[key].indexOf(value) > -1) {
       // 如果value包含，则加入
       resData.push(item);
+    } else {
+      const _children = item[_childrenKey];
+      // 获取所有符合的子集
+      if (_children && _children.length) {
+        const childData = filterTreeData(_children, value, key, _childrenKey);
+        if (childData && childData.length) {
+          // 有符合的子集，就加入当前的item，形成链
+          resData.push({
+            ...item,
+            [_childrenKey]: childData,
+          });
+        }
+      }
     }
   }
   return resData;
@@ -222,24 +236,29 @@ export const filterTreeData = (
  * @returns {any[]} 扁平化的列表
  */
 export const filterLine = (origin: any[], value: string, key: string, childrenKey?: string): any[] => {
+  if (!origin || !origin.length) {
+    return [];
+  }
   const _childrenKey = childrenKey || 'children';
   const getLineTree = (origin: any[], value: string, key: string): any[] => {
     const resData = [];
     for (const item of origin) {
-      const _children = item[_childrenKey];
-      const childData = getLineTree(_children, value, key);
-      if (_children && childData.length) {
-        // 底下有的
-        resData.push({
-          ...item,
-          [_childrenKey]: childData,
-        });
-        continue;
-      }
       if (item[key] == value) {
         // 本身就是，匹配到之后不要底下的
         const _item = { ...item, [_childrenKey]: undefined };
         resData.push(_item);
+      } else {
+        const _children = item[_childrenKey] || [];
+        if (_children && _children.length) {
+          const childData = getLineTree(_children, value, key);
+          if (childData && childData.length) {
+            // 底下有的
+            resData.push({
+              ...item,
+              [_childrenKey]: childData,
+            });
+          }
+        }
       }
     }
     return resData;
@@ -262,6 +281,9 @@ export const filterLine = (origin: any[], value: string, key: string, childrenKe
  * @returns {any[]} 扁平的叶子节点数组
  */
 export const getLeafs = (treeL: any[], childrenKey?: string) => {
+  if (!treeL || !treeL.length) {
+    return [];
+  }
   const leafs: any[] = [];
   const loop = (list: any[]) => {
     list?.forEach((item) => {
