@@ -17,3 +17,24 @@ export const deepClone = (obj: any) => {
   }
   return cloneObj;
 };
+
+/**
+ * 获取obj连锁key值的value
+ * @param obj 
+ * @param key 
+ */
+export const getChainKeysValue = (obj: any, key: string) => {
+  if (!obj || !key || typeof key !== 'string' || !(obj instanceof Object)) {
+    return null
+  }
+  const keyL = key.split('.');
+  let _v = obj;
+  for (let i = 0; i < keyL.length; i++) {
+    if (!_v) {
+      _v = null
+      break;
+    }
+    _v = _v[keyL[i]];
+  }
+  return _v
+}

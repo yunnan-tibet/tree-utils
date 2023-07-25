@@ -1,6 +1,6 @@
 {
   "name": "@szsk/tree-utils",
-  "version": "0.0.3",
+  "version": "0.1.2",
   "description": "common tree utils",
   "main": "lib/index.js",
   "scripts": {
