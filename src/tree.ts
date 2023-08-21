@@ -37,7 +37,7 @@ export const changeTreePropName = (list: any[], changeKeys: Array<[string, strin
  * @param {any[]} source 原数据List
  * @param {string} idKey id的key
  * @param {string} parentIdKey parentId的key 
- * @param {string} childrenKey children的key
+ * @param {string} childrenKey 生成children的key
  * @param {string} topCode 顶级元素父元素的id
  * @returns {tree[]} 树形数组
  */
@@ -93,11 +93,11 @@ export const findSingle = (tree: any, key: string, value: any, childrenKey?: str
  * 根据key从主树list获取子树
  * @param {string} key key
  * @param {tree[]} treeList list类型
- * @param {string} value 值
+ * @param {any} value 值
  * @param {string} childrenKey children属性key，默认为children
  * @returns {treeObj} 树形对象
  */
-export const getMyTreeListById = (key: string, treeList: any[], value: string, childrenKey?: string) => {
+export const getMyTreeListByKey = (treeList: any[], key: string, value: any, childrenKey?: string) => {
   if (!treeList || !treeList.length) {
     return null;
   }
@@ -146,31 +146,31 @@ export const getAllTreeKeys = (treeList: any[], key: string, childrenKey?: strin
  *  通常用于获取某个子树下节点的所有id
  * @param {string} key 选用字段key
  * @param {tree[]} treeList 源树形数组
- * @param {string} value 值
+ * @param {any} value 值
  * @param {string} childrenKey children属性key，默认为children
  * @returns {string[]} key值数组
  */
-export const getTreeIdsById = (key: string, treeList: any[], value: string, childrenKey?: string) => {
+export const getTreeKeysByKey = (treeList: any[], key: string, value: any, childrenKey?: string) => {
   if (!treeList || !treeList.length) {
     return [];
   }
   const _childrenKey = childrenKey || 'children';
-  let myTreeObj = getMyTreeListById(key, treeList, value, _childrenKey);
+  let myTreeObj = getMyTreeListByKey(treeList, key, value, _childrenKey);
   if (!myTreeObj) {
     return [];
   }
-  let treeIds: any[] = [];
-  const getTreeIds = (_treeList: any[]) => {
+  let treeKeys: any[] = [];
+  const getTreeKeys = (_treeList: any[]) => {
     _treeList.forEach((item) => {
       const _children = item[_childrenKey];
-      treeIds.push(item[key]);
+      treeKeys.push(item[key]);
       if (_children && _children.length) {
-        getTreeIds(_children);
+        getTreeKeys(_children);
       }
     });
   }
-  getTreeIds([myTreeObj]);
-  return treeIds;
+  getTreeKeys([myTreeObj]);
+  return treeKeys;
 }
 
 /**
@@ -199,19 +199,19 @@ export function getPeerList(list: any[], childrenKey?: string) {
 }
 
 /**
- * 根据字符串筛选tree，底下有的会保存上面和下面的链
+ * 根据字符串模糊筛选tree，底下有的会保存上面和下面的链
  * 例子：
- *  通常用于名字搜索
- * @param {tree[]} origin 原始tree，子集为children
- * @param {string} value 筛选字符串
+ *  通常用于名字模糊搜索
+ * @param {tree[]} origin 原始tree
  * @param {string} key 字符串对比的key
+ * @param {any} value 筛选字符串
  * @param {string} childrenKey children属性key，默认为children
  * @returns {tree[]} 树形数组，保存上链和下链
  */
 export const filterTreeData = (
   origin: any[],
-  value: string,
   key: string,
+  value: any,
   childrenKey?: string,
 ): any[] => {
   if (!origin || !origin.length) {
@@ -228,7 +228,7 @@ export const filterTreeData = (
       const _children = item[_childrenKey];
       // 获取所有符合的子集
       if (_children && _children.length) {
-        const childData = filterTreeData(_children, value, key, _childrenKey);
+        const childData = filterTreeData(_children, key, value, _childrenKey);
         if (childData && childData.length) {
           // 有符合的子集，就加入当前的item，形成链
           resData.push({
@@ -243,21 +243,22 @@ export const filterTreeData = (
 };
 
 /**
- * 根据key筛选tree，仅匹配到一个，底下有的会保存上链，去除底部
+ * 根据key筛选tree得到扁平化数组，仅匹配到一个，底下有的会保存上链，去除底部（精准匹配）
  * 例子：
  *  主要用于获取匹配id节点的上链（扁平化）
- * @param {tree[]} origin 原始tree，子集为children
- * @param {string} value 筛选值
+ *  用于树形名称的链式回显 杭州市/西湖区/xx苑
+ * @param {tree[]} origin 原始tree
  * @param {string} key 对比的key
+ * @param {any} value 筛选值
  * @param {string} childrenKey children属性key，默认为children
  * @returns {any[]} 扁平化的列表，保存上链
  */
-export const filterLine = (origin: any[], value: string, key: string, childrenKey?: string): any[] => {
+export const filterLine = (origin: any[], key: string, value: any, childrenKey?: string): any[] => {
   if (!origin || !origin.length) {
     return [];
   }
   const _childrenKey = childrenKey || 'children';
-  const getLineTree = (origin: any[], value: string, key: string): any[] => {
+  const getLineTree = (origin: any[], key: string, value: any): any[] => {
     const resData = [];
     for (const item of origin) {
       if (item[key] == value) {
@@ -267,7 +268,7 @@ export const filterLine = (origin: any[], value: string, key: string, childrenKe
       } else {
         const _children = item[_childrenKey] || [];
         if (_children && _children.length) {
-          const childData = getLineTree(_children, value, key);
+          const childData = getLineTree(_children, key, value);
           if (childData && childData.length) {
             // 底下有的
             resData.push({
@@ -280,7 +281,7 @@ export const filterLine = (origin: any[], value: string, key: string, childrenKe
     }
     return resData;
   };
-  let lineTree: any = getLineTree(origin, value, key);
+  let lineTree: any = getLineTree(origin, key, value);
   const lineList = [];
   while (lineTree && lineTree.length) {
     lineList.push(lineTree[0]);
