@@ -199,48 +199,115 @@ export function getPeerList(list: any[], childrenKey?: string) {
 }
 
 /**
- * 根据字符串模糊筛选tree，底下有的会保存上面和下面的链
+ * 根据字符串模糊筛选tree，底下有的会保存上面和下面的链，支持多个模糊搜索
  * 例子：
  *  通常用于名字模糊搜索
  * @param {tree[]} origin 原始tree
- * @param {string} key 字符串对比的key
+ * @param {string | string[]} key 字符串对比的key，支持多个
  * @param {any} value 筛选字符串
  * @param {string} childrenKey children属性key，默认为children
  * @returns {tree[]} 树形数组，保存上链和下链
  */
 export const filterTreeData = (
   origin: any[],
-  key: string,
+  key: string | string[],
   value: any,
   childrenKey?: string,
 ): any[] => {
   if (!origin || !origin.length) {
-    return [];
+    return []
   }
-  const resData = [];
-  const _childrenKey = childrenKey || 'children';
+  const resData = []
+  const _childrenKey = childrenKey || 'children'
+
+  const isFitIn = (record: any, key: string | string[], value: any) => {
+    if (typeof key == 'string') {
+      return record[key].indexOf(value) > -1
+    } else if (key instanceof Array) {
+      return key.some((_key) => record[_key].indexOf(value) > -1)
+    }
+  }
+
   // 其实是对子集的筛选
   for (const item of origin) {
-    if (typeof item[key] === 'string' && item[key].indexOf(value) > -1) {
+    if (isFitIn(item, key, value)) {
       // 如果value包含，则加入
-      resData.push(item);
+      resData.push(item)
     } else {
-      const _children = item[_childrenKey];
+      const _children = item[_childrenKey]
       // 获取所有符合的子集
       if (_children && _children.length) {
-        const childData = filterTreeData(_children, key, value, _childrenKey);
+        const childData = filterTreeData(_children, key, value, _childrenKey)
         if (childData && childData.length) {
           // 有符合的子集，就加入当前的item，形成链
           resData.push({
             ...item,
             [_childrenKey]: childData,
-          });
+          })
         }
       }
     }
   }
-  return resData;
-};
+  return resData
+}
+
+/**
+ * 精准筛选tree，底下有的会保存上面和下面的链
+ * 例子：
+ *  获取单独整条链
+ * @param {tree[]} origin 原始tree
+ * @param {string | string[]} key 字符串对比的key，支持多个
+ * @param {any} value 筛选字符串
+ * @param {string} childrenKey children属性key，默认为children
+ * @returns {tree[]} 树形数组，保存上链和下链
+ */
+export const filterTreeDataExact = (
+  origin: any[],
+  key: string | string[],
+  value: any,
+  childrenKey?: string,
+): any[] => {
+  if (!origin || !origin.length) {
+    return []
+  }
+  const resData = []
+  const _childrenKey = childrenKey || 'children'
+
+  const isFitIn = (record: any, key: string | string[], value: any) => {
+    if (typeof key == 'string') {
+      return record[key] === value
+    } else if (key instanceof Array) {
+      return key.some((_key) => record[_key] === value)
+    }
+  }
+
+  // 其实是对子集的筛选
+  for (const item of origin) {
+    if (isFitIn(item, key, value)) {
+      // 如果value包含，则加入
+      resData.push(item)
+    } else {
+      const _children = item[_childrenKey]
+      // 获取所有符合的子集
+      if (_children && _children.length) {
+        const childData = filterTreeDataExact(
+          _children,
+          key,
+          value,
+          _childrenKey,
+        )
+        if (childData && childData.length) {
+          // 有符合的子集，就加入当前的item，形成链
+          resData.push({
+            ...item,
+            [_childrenKey]: childData,
+          })
+        }
+      }
+    }
+  }
+  return resData
+}
 
 /**
  * 根据key筛选tree得到扁平化数组，仅匹配到一个，底下有的会保存上链，去除底部（精准匹配）
@@ -315,4 +382,75 @@ export const getLeafs = (treeL: any[], childrenKey?: string) => {
   }
   loop(treeL);
   return leafs;
+}
+
+/**
+ * 将两个树形列表进行合并，合并数组默认是同层级的合并
+ * @param {tree[]} treeList 源树形数组
+ * @param {tree[]} addTreeList 加入的树形数组
+ * @param {string} key 对比的key
+ * @param {string} childenKey children属性key，默认为children
+ * @returns {tree[]} 合并后的树形数组
+ */
+export const mergeTreeList = (
+  treeList: any[],
+  addTreeList: any[],
+  key: string,
+  childenKey?: string,
+) => {
+  const _childrenKey = childenKey || 'children'
+  let notHasL = [...(addTreeList || [])]
+  let newL = treeList.map((item) => {
+    const sameIdItem = addTreeList.find(
+      (item1) => item[key] == item1[key],
+    )
+    if (sameIdItem) {
+      item[_childrenKey] = mergeTreeList(
+        item[_childrenKey] || [],
+        sameIdItem[_childrenKey] || [],
+        key,
+        _childrenKey
+      )
+      notHasL = notHasL.filter((item2) => item[key] != item2[key])
+    }
+    return item
+  })
+  return [...newL, ...notHasL]
+}
+/**
+ * 根据key在主树截断不符合的子元素
+ * 例子：
+ *  用于权限列表中的菜单类型过滤
+ * @param {tree[]} treeList 源树形数组
+ * @param {string} key 选用字段key
+ * @param {any} value 值
+ * @param {string} childrenKey children属性key，默认为children
+ * @returns {tree[]} 筛选后的树形数组
+ */
+export const filterTopMenu = (
+  treeList: any[],
+  key: string,
+  value: any,
+  childrenKey?: string,
+) => {
+  if (!treeList || !treeList.length) {
+    return []
+  }
+  const _childrenKey = childrenKey || 'children'
+
+  const loop = (list: any[]) => {
+    const _l: any[] = []
+    list.forEach((item) => {
+      let _children = item[_childrenKey]
+      const v = getChainKeysValue(item, key)
+      if (v == value) {
+        if (_children && _children.length) {
+          _children = loop(_children)
+        }
+        _l.push({ ...item, [_childrenKey]: _children })
+      }
+    })
+    return _l
+  }
+  return loop(treeList)
 }
